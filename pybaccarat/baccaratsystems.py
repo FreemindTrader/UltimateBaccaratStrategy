@@ -868,6 +868,41 @@ class Ultimate(BaccSys):
 
         return False
 
+
+    def try_coup_when_in_red(self, whats_left):
+        # here we are already losing
+        if (abs(whats_left) < self.max_loss_per_shoe):
+            self.amt_bet = self.base_bet * self.registry_count
+            self.bet_units = self.registry_count
+        else:
+            ''' 
+                Since we have exceed the max loss limit for the current shoe, 
+                We will have to quit betting
+            '''
+            if (abs(self.money) >= self.max_loss_per_shoe):
+                self.bet_on = ""
+                self.bet_units = 0
+                self.amt_bet = 0
+                self.busted = True
+                return False
+            else:
+                '''
+                    Whatever money we can use, we will only bet close to the limit
+                '''
+                margin_left = self.max_loss_per_shoe - abs(self.money)
+                left_unit = int(margin_left / self.base_bet)
+
+                if (left_unit > 0):
+                    self.bet_units = left_unit
+                    self.amt_bet = left_unit * self.base_bet
+                    return True
+                else:
+                    self.bet_on = ""
+                    self.bet_units = 0
+                    self.amt_bet = 0
+                    self.busted = True
+                    return False
+
     '''
         Majority of the betting logic is in the 
     '''
@@ -880,9 +915,6 @@ class Ultimate(BaccSys):
 
         self.current_state = new_state
 
-
-        to_bet = 0
-
         if self.registry_count > 0:
 
             '''
@@ -891,55 +923,18 @@ class Ultimate(BaccSys):
                     We have to calculated that here.
             '''
 
-            potential_loss = self.money - self.registry_count * self.base_bet
+            whats_left = self.money - self.registry_count * self.base_bet
 
-            if (abs(potential_loss) < self.max_loss_per_shoe):
-                to_bet = self.base_bet * self.registry_count
+            # we are still winning
+            if ( whats_left > 0 ):
+                self.amt_bet = self.base_bet * self.registry_count
                 self.bet_units = self.registry_count
             else:
-                ''' 
-                    Since we have exceed the max loss limit for the current shoe, 
-                    We will have to quit betting
-                '''
-                if (abs(self.money) >= self.max_loss_per_shoe):
-                    to_bet = ""
-                    self.bet_on = ""
-                    self.bet_units = 0
-                    self.amt_bet = 0
-                    self.busted = True
-                    return False
-                else:
-                    '''
-                        Whatever money we can use, we will only bet close to the limit
-                    '''
-                    margin_left = self.max_loss_per_shoe - abs(self.money)
-                    left_unit = int(margin_left/self.base_bet)
-
-                    if (left_unit>0):
-                        self.bet_units = left_unit
-                        self.amt_bet = left_unit * self.base_bet
-                        return True
-                    else:
-                        self.bet_on = ""
-                        self.bet_units = 0
-                        self.amt_bet = 0
-                        self.busted = True
-                        return False
-
+                self.try_coup_when_in_red( whats_left)
         else:
             self.bet_units = 1
-            to_bet = self.base_bet * self.bet_units
+            self.amt_bet = self.base_bet * self.bet_units
 
-
-        netMoney = self.initial_money + self.money
-
-        if (to_bet > netMoney):
-            new_bet_unit = int( netMoney / self.base_bet )
-            self.registry_count = new_bet_unit
-            self.bet_units = new_bet_unit
-            to_bet = new_bet_unit * self.base_bet
-
-        self.amt_bet = to_bet
 
         return True
 
