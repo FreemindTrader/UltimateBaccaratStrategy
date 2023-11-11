@@ -3,7 +3,8 @@
 import argparse
 from pybaccarat.playingcards import Shoe
 from pybaccarat.baccarat import Game
-from pybaccarat.baccaratsystems import Interactive, JustBoards, Ultimate
+from pybaccarat.baccaratsystems import Interactive, JustBoards
+from pybaccarat.UltimateBaccarat import Ultimate
 from colorama import init as colorama_init
 from colorama import Fore
 from colorama import Style
