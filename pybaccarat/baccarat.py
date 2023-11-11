@@ -383,7 +383,7 @@ class Ties(object):
         '''!
         Print the current status of the tie tracker.
         '''
-        return "Ties(%s)" % self.__tie_tracker
+        return ""
     # -------------------------------------------------------------------------
     def remove_last(self):
         if len(self.__tie_tracker) > 0:
@@ -538,11 +538,11 @@ class Game(object):
             system_hand_output = ""
             if self.system_play is not None:
                 #
-                print(79*"=")
-                print(boards[0].print_lines())
-                print(boards[2].print_lines())
-                print(str(tie_track))
-                print(self.system_play.end_shoe())
+                # print(79*"_")
+
+                # print(boards[2].print_lines())
+                # print(str(tie_track))
+
                 #
                 system_hand_output = self.system_play.hand_pre()
                 if special_JustBoards:
@@ -599,7 +599,7 @@ class Game(object):
 
             # shoe hand results
             if self.system_play is not None:
-                system_hand_output += self.system_play.hand_post(win+diff,
+                system_hand_output += self.system_play.hand_post(win, win+diff,
                                                                  self.__player,
                                                                  self.__banker)
 
@@ -625,14 +625,15 @@ class Game(object):
                 if (32 - 4 * (hand_number // 11)) < rc2:
                     flag2 = "<"
 
-                print(("%02d P%d%-10s B%d%-10s %s%s %s BPT=%02d-%02d-%02d" + \
-                      " %02d/%02d %s%s%02d,%02d%s %s") %
-                      (hand_number,
+                print(("[%02d] *** %s ***, %s WON, P%d%-10s B%d%-10s BPT=%02d-%02d-%02d" ) %
+                      (hand_number,  system_hand_output, win,
                        self.__player.value(), str(self.__player),
                        self.__banker.value(), str(self.__banker),
-                       win, diff, bonus, bpt['B'], bpt['P'], bpt['T'],
-                       board0horiz_count[0], board0horiz_count[1], peekB,
-                       flag1, rc1, rc2, flag2, system_hand_output))
+                       bpt['B'], bpt['P'], bpt['T'] ))
+
+                print(boards[0].print_lines())
+                print(self.system_play.end_shoe())
+                print(79 * "_")
             # notify the user
             if self.__shoe.cut_card_seen() and not last_hand:
                 if display:

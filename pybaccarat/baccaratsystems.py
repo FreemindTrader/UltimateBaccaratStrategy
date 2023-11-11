@@ -8,6 +8,8 @@ systems for playing the game <B>Baccarat</B>.
 '''
 
 import readchar
+from colorama import Fore
+from colorama import Style
 
 
 class Dragon(object):
@@ -60,7 +62,7 @@ class Dragon(object):
         return ""
 
     # --------------------------------------------------------------------
-    def hand_post(self, win_diff, player, banker):
+    def hand_post(self, win, win_diff, player, banker):
         '''!
         TBD
         '''
@@ -190,7 +192,7 @@ class EZDragon(object):
         self.hand_number += 1
         return ""
 
-    def hand_post(self, win_diff, player, banker):
+    def hand_post(self, win, win_diff, player, banker):
         '''!
         This is the result of a hand being played.
         @param hand_number <em>int</em>
@@ -303,8 +305,8 @@ class BaccSys(object):
         Reset the data elements within the baccarat system object.
         '''
         self.hand_number = 0
-        self.play_on = None
-        self.play_size = 0
+        self.bet_on = None
+        self.amt_bet = 0
         self.won = 0
         self.lost = 0
         self.tied = 0
@@ -332,8 +334,8 @@ class BaccSys(object):
         @return display string
         '''
         self.hand_number = 1
-        self.play_on = None
-        self.play_size = 0
+        self.bet_on = None
+        self.amt_bet = 0
         return ""
 
     def result_won(self, amount):
@@ -360,7 +362,7 @@ class BaccSys(object):
         self.money -= amount
         self.last_WLT = "L"
 
-    def hand_post(self, win_diff, player_hand, banker_hand):
+    def hand_post(self, win,  win_diff, player_hand, banker_hand):
         '''!
         This method is called at the end of a Hand.
         A baccarat system can update their own results.
@@ -374,42 +376,45 @@ class BaccSys(object):
         @param banker_hand Hand a pointer to the Hand object containing the
             cards for the bankers hand. For read-only purposes.
         '''
+
+
+
         # record results of a play
-        if self.play_on is not None and self.play_size > 0:
-            if self.play_on == "B":
+        if self.bet_on is not None and self.amt_bet > 0:
+            if self.bet_on == "B":
                 if win_diff[0] == "B":
-                    self.result_won(0.95 * self.play_size)
+                    self.result_won(0.95 * self.amt_bet)
                 elif win_diff[0] == "T":
                     self.tied += 1
                     self.last_WLT = "T"
                 elif win_diff[0] == "P":
-                    self.result_lost(self.play_size)
+                    self.result_lost(self.amt_bet)
                 else:
                     pass#unknown
-            elif self.play_on == "P":
+            elif self.bet_on == "P":
                 if win_diff[0] == "P":
-                    self.result_won(self.play_size)
+                    self.result_won(self.amt_bet)
                 elif win_diff[0] == "T":
                     self.tied += 1
                     self.last_WLT = "T"
                 elif win_diff[0] == "B":
-                    self.result_lost(self.play_size)
+                    self.result_lost(self.amt_bet)
                 else:
                     pass#unknown?
-            elif self.play_on == "T":
+            elif self.bet_on == "T":
                 if win_diff[0] == "T":
-                    self.result_won(8.0 * self.play_size)
+                    self.result_won(8.0 * self.amt_bet)
                 elif win_diff[0] == "B":
-                    self.result_lost(self.play_size)
+                    self.result_lost(self.amt_bet)
                 elif win_diff[0] == "P":
-                    self.result_lost(self.play_size)
+                    self.result_lost(self.amt_bet)
                 else:
                     pass#unknown?
             else:
                 pass#unknown?
         # clear this last play
-        self.play_on = None
-        self.play_size = 0
+        self.bet_on = None
+        self.amt_bet = 0
         return ""
 
     def end_shoe(self):
@@ -440,8 +445,8 @@ class BaccSys(object):
         @param side String "B" or "P" or "T"
         @param size integer
         '''
-        self.play_on = side
-        self.play_size = size
+        self.bet_on = side
+        self.amt_bet = size
         return side
 
     def quit_this_shoe(self):
@@ -590,8 +595,8 @@ class George1(BaccSys):
         return "playG7"
 
 class ValSys(BaccSys):
-    def hand_post(self, win_diff, p_hand, b_hand):
-        parent_ret = super(ValSys,self).hand_post(win_diff,p_hand,b_hand)
+    def hand_post(self, win, win_diff, p_hand, b_hand):
+        parent_ret = super(ValSys,self).hand_post(win, win_diff,p_hand,b_hand)
         return " %s" % self.last_WLT
     def hand_pre(self):
         '''!
@@ -627,7 +632,223 @@ class ValSys(BaccSys):
             for j in i:
                 seq2 += "0123456789abcdefghij"[j]
             seq2 += " "
-        return "EndSys(%s) %d-%d-%d=%+.2f, %s" % (self.name,self.won, \
-            self.lost,self.tied,self.money,seq2)
+        return "Won = %d hands, Lost = %d hands, Tie = %d hands, Money =%+.2f, Sequence %s" % ( self.won, self.lost, self.tied, self.money, seq2)
+
+
+class Ultimate(BaccSys):
+
+    def __init__(self):
+        '''!
+        TBD
+        '''
+
+        self.last_actual_outcome = ""
+        self.current_state = 0
+        self.last_bet_on = ""
+        self.last_amt_bet = 0
+        self.registry_count = 0
+
+        self.initial_money = 0
+        self.base_bet = 300
+        self.last_bet_unit = 0
+
+        self.played_hands = 0
+        self.bet_units = 1
+
+        self.cum_won = 0
+
+        super(Ultimate, self).__init__()
+
+    def deposit_money(self, to_deposit ):
+        self.initial_money += to_deposit
+        return self.initial_money
+
+
+
+    def backup_states(self):
+        self.last_amt_bet = self.amt_bet
+        self.last_bet_on = self.bet_on
+        self.last_bet_unit = self.bet_units
+
+
+    def get_strategy_string(self):
+        output = "NO BET"
+        winloss = ""
+        if self.last_WLT == "W":
+            winloss = "W "
+        elif self.last_WLT == "L":
+            winloss = "X "
+
+        if self.last_bet_unit > 0:
+            if self.registry_count > 0:
+                output = f"{Fore.GREEN}" + "{0} {1}{2}{3}-{4} ".format(winloss, self.current_state, self.last_bet_on, self.last_bet_unit, self.registry_count ) + f"{Style.RESET_ALL}"
+            else:
+                output = f"{Fore.GREEN}" + "{0} {1}{2}{3}".format(winloss, self.current_state, self.last_bet_on, self.last_bet_unit )+ f"{Style.RESET_ALL}"
+
+        return output
+
+    def update_registry(self):
+        if self.last_WLT == "W":
+            self.win_update_registry()
+        elif self.last_WLT == "L":
+            self.loss_update_registry()
+
+    def loss_update_registry(self):
+        if self.registry_count == 0:
+            self.registry_count = self.last_bet_unit + 1
+        else:
+            self.registry_count += self.last_bet_unit
+
+    def win_update_registry(self):
+        if self.registry_count > 0:
+            self.registry_count -= self.last_bet_unit
+
+    def win_start_coup(self):
+        to_bet = 0
+
+        if self.registry_count > 0:
+            to_bet = self.base_bet * self.registry_count
+            self.bet_units = self.registry_count
+        else:
+            self.bet_units = 1
+            to_bet = self.base_bet * self.bet_units
+
+
+        netMoney = self.initial_money + self.money
+
+        if (to_bet > netMoney):
+            new_bet_unit = int( netMoney / self.base_bet )
+            self.registry_count = new_bet_unit
+            self.bet_units = new_bet_unit
+            to_bet = new_bet_unit * self.base_bet
+
+        self.amt_bet = to_bet
+
+    def process_state1(self):
+        if self.last_WLT == "W":
+            self.current_state = 1
+            self.bet_on = self.opposite_side(self.last_bet_on)
+            self.win_start_coup()
+
+
+        elif self.last_WLT == "T":
+            self.current_state = 1
+            self.bet_on = self.last_bet_on
+            self.amt_bet = self.last_amt_bet
+
+        elif self.last_WLT == "L":
+            self.current_state = 2
+            self.bet_on = self.last_bet_on
+            self.bet_units = 1
+            self.amt_bet = self.base_bet * self.bet_units
+
+        self.backup_states()
+
+
+    def process_state2(self):
+        if self.last_WLT == "W":
+            self.current_state = 1
+            self.bet_on = self.last_bet_on
+            self.win_start_coup()
+
+        elif self.last_WLT == "T":
+            self.current_state = 2
+            self.bet_on = self.last_bet_on
+            self.amt_bet = self.last_amt_bet
+        else:
+            self.current_state = 3
+            self.bet_on = self.opposite_side(self.last_bet_on)
+            self.bet_units = 1
+            self.amt_bet = self.base_bet * self.bet_units
+
+        self.backup_states()
+
+    def process_state3(self):
+        if self.last_WLT == "W":
+            self.current_state = 1
+            self.bet_on = self.opposite_side(self.last_bet_on)
+            self.win_start_coup()
+
+        elif self.last_WLT == "T":
+            self.current_state = 3
+            self.bet_on = self.last_bet_on
+            self.amt_bet = self.last_amt_bet
+        else:
+            self.current_state = 4
+            self.bet_on = self.last_bet_on
+            self.bet_units = 1
+            self.amt_bet = self.base_bet * self.bet_units
+
+        self.backup_states()
+
+
+    def process_state4(self):
+        if self.last_WLT == "W":
+            self.current_state = 3
+            self.bet_on = self.last_bet_on
+            self.win_start_coup()
+        elif self.last_WLT == "T":
+            self.current_state = 3
+            self.bet_on = self.last_bet_on
+            self.amt_bet = self.last_amt_bet
+        else:
+            self.current_state = 1
+            self.bet_on = self.opposite_side(self.last_bet_on)
+            self.bet_units = 1
+            self.amt_bet = self.base_bet * self.bet_units
+
+        self.backup_states()
+
+
+    def hand_pre(self):
+        '''!
+        Ultimate Baccarat Strategy rules:
+        1. if board 2 last entry is in row 1, play chop else play same
+        2. overrides rule 1. If 4+ in a row on board 0, play same
+        '''
+        parent_ret = super(Ultimate, self).hand_pre()
+
+        if self.last_actual_outcome != "":
+            if self.current_state == 0:
+                self.current_state = 1
+
+                self.bet_on = self.opposite_side(self.last_actual_outcome)
+                self.bet_units = 1
+                self.amt_bet = self.base_bet * self.bet_units
+
+                self.backup_states()
+
+            elif self.current_state == 1:
+                self.process_state1()
+            elif self.current_state == 2:
+                self.process_state2()
+            elif self.current_state == 3:
+                self.process_state3()
+            elif self.current_state == 4:
+                self.process_state4()
+
+        #
+        return ""
+
+    def hand_post(self, win, win_diff, p_hand, b_hand):
+
+        if ( win[0] != "T"):
+            self.last_actual_outcome = win[0]
+
+        parent_ret = super(Ultimate, self).hand_post(win, win_diff,p_hand,b_hand)
+
+        self.update_registry()
+
+        return self.get_strategy_string()
+
+    def end_shoe(self):
+        seq2 = ""
+        for i in self.WLseq:
+            for j in i:
+                seq2 += "0123456789abcdefghij"[j]
+            seq2 += " "
+        return "Won = %d, Lost = %d, Tie = %d, Money = %+.2f, Sequence = %s" % ( self.won, self.lost,self.tied,self.money,seq2)
+
+
 
 # END

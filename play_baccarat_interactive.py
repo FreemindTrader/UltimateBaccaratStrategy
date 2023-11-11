@@ -3,7 +3,10 @@
 import argparse
 from pybaccarat.playingcards import Shoe
 from pybaccarat.baccarat import Game
-from pybaccarat.baccaratsystems import Interactive, JustBoards
+from pybaccarat.baccaratsystems import Interactive, JustBoards, Ultimate
+from colorama import init as colorama_init
+from colorama import Fore
+from colorama import Style
 
 
 def just_boards():
@@ -18,7 +21,11 @@ def play(shoe=None):
     print("Press ESC to skip to the end of the shoe. Spacebar for no bet hand.")
     print("Press 1 through 5 then P or B to specify the P or B size.")
     print("")
-    Game(shoe=shoe, system=Interactive()).play()
+
+    ultimate_baccarat = Ultimate()
+    ultimate_baccarat.deposit_money(50000)
+
+    Game(shoe=shoe, system=ultimate_baccarat).play()
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -30,6 +37,7 @@ def str2bool(v):
 
 if __name__ == "__main__":
     # command line entry point
+    colorama_init()
 
     parser = argparse.ArgumentParser("Play a game of Baccarat interactively")
     parser.add_argument("--create", dest="create_filespec",
