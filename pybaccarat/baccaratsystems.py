@@ -703,7 +703,12 @@ class Ultimate(BaccSys):
                                                                           self.last_bet_unit,
                                                                           self.registry_count) + f"{Style.RESET_ALL}"
             else:
-                output = f"{Fore.GREEN}" + "C {0}{1}{2}".format(self.current_state, self.last_bet_on, self.last_bet_unit )+ f"{Style.RESET_ALL}"
+                if (self.last_WLT == "W"):
+                    output = f"{Fore.GREEN} C " + "{0}{1}{2}".format(self.current_state, self.last_bet_on, self.last_bet_unit )+ f"{Style.RESET_ALL}"
+                elif (self.last_WLT == "T"):
+                    output = f"{Fore.GREEN} T " + "{0}{1}{2}".format(self.current_state, self.last_bet_on,
+                                                                     self.last_bet_unit) + f"{Style.RESET_ALL}"
+
 
         if self.busted:
             return f"{Fore.RED}!!!! FUCKED FOR THIS SHOE !!!"+ f"{Style.RESET_ALL}"
@@ -907,11 +912,12 @@ class Ultimate(BaccSys):
                     '''
                         Whatever money we can use, we will only bet close to the limit
                     '''
-                    margin_left = self.max_loss_per_shoe - self.money
+                    margin_left = self.max_loss_per_shoe - abs(self.money)
                     left_unit = int(margin_left/self.base_bet)
 
                     if (left_unit>0):
                         self.bet_units = left_unit
+                        self.amt_bet = left_unit * self.base_bet
                         return True
                     else:
                         self.bet_on = ""
