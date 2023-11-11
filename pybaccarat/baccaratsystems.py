@@ -659,9 +659,12 @@ class Ultimate(BaccSys):
         self.bet_limit_max_unit = 7
         self.target_profit_unit = 8
         self.loss_limit_unit = self.bank_roll_unit
+        self.max_loss_per_shoe = self.loss_limit_unit * self.base_bet
 
         self.played_hands = 0
         self.bet_units = 1
+
+        self.busted = False
 
         self.cum_won = 0
 
@@ -686,12 +689,24 @@ class Ultimate(BaccSys):
             winloss = "W "
         elif self.last_WLT == "L":
             winloss = "X "
+        elif self.last_WLT == "T":
+            winloss = "T "
 
         if self.last_bet_unit > 0:
             if self.registry_count > 0:
-                output = f"{Fore.GREEN}" + "{0} {1}{2}{3}-{4} ".format(winloss, self.current_state, self.last_bet_on, self.last_bet_unit, self.registry_count ) + f"{Style.RESET_ALL}"
+                if self.last_WLT == "W":
+                    output = f"{Fore.CYAN}" + "{0} {1}{2}{3}-{4} ".format(winloss, self.current_state, self.last_bet_on, self.last_bet_unit, self.registry_count ) + f"{Style.RESET_ALL}"
+                elif self.last_WLT == "L":
+                    output = f"{Fore.RED}" + "{0} {1}{2}{3}-{4} ".format(winloss, self.current_state, self.last_bet_on, self.last_bet_unit, self.registry_count ) + f"{Style.RESET_ALL}"
+                elif self.last_WLT == "T":
+                    output = f"{Fore.WHITE}" + "{0} {1}{2}{3}-{4} ".format(winloss, self.current_state, self.last_bet_on,
+                                                                          self.last_bet_unit,
+                                                                          self.registry_count) + f"{Style.RESET_ALL}"
             else:
-                output = f"{Fore.GREEN}" + "{0} {1}{2}{3}".format(winloss, self.current_state, self.last_bet_on, self.last_bet_unit )+ f"{Style.RESET_ALL}"
+                output = f"{Fore.GREEN}" + "C {0}{1}{2}".format(self.current_state, self.last_bet_on, self.last_bet_unit )+ f"{Style.RESET_ALL}"
+
+        if self.busted:
+            return f"{Fore.RED}!!!! FUCKED FOR THIS SHOE !!!"+ f"{Style.RESET_ALL}"
 
         return output
 
@@ -711,10 +726,7 @@ class Ultimate(BaccSys):
         if self.registry_count > 0:
             self.registry_count -= self.last_bet_unit
 
-    def has_exceed_loss_limit(self):
-        if ( self.registry_count + 1 > self.loss_limit_unit ):
-            return True
-        return False
+
 
     def bet_one_unit_after_loss(self, new_state ):
 
@@ -725,11 +737,12 @@ class Ultimate(BaccSys):
 
         self.current_state = new_state
 
-        if self.has_exceed_loss_limit():
+        if self.will_exceed_loss_limit():
             self.current_state = 0
             self.bet_on = ""
             self.bet_units = 0
             self.amt_bet = 0
+            self.busted = True
         else:
             self.current_state = new_state
             self.bet_units = 1
@@ -823,11 +836,15 @@ class Ultimate(BaccSys):
         if ( win[0] != "T"):
             self.last_actual_outcome = win[0]
 
-        parent_ret = super(Ultimate, self).hand_post(win, win_diff,p_hand,b_hand)
+        if ( self.busted != True ):
+            parent_ret = super(Ultimate, self).hand_post(win, win_diff,p_hand,b_hand)
+            self.update_registry()
+            return self.get_strategy_string()
 
-        self.update_registry()
+        if self.busted:
+            return f"{Fore.RED}!!!! FUCKED FOR THIS SHOE !!!"+ f"{Style.RESET_ALL}"
 
-        return self.get_strategy_string()
+        return ""
 
     def end_shoe(self):
         seq2 = ""
@@ -836,6 +853,15 @@ class Ultimate(BaccSys):
                 seq2 += "0123456789abcdefghij"[j]
             seq2 += " "
         return "Won = %d, Lost = %d, Tie = %d, Money = %+.2f, Sequence = %s" % ( self.won, self.lost,self.tied,self.money,seq2)
+
+
+    def will_exceed_loss_limit(self):
+        potential_loss = self.money - self.base_bet
+
+        if (abs(potential_loss) > self.max_loss_per_shoe):
+            return True
+
+        return False
 
     '''
         Majority of the betting logic is in the 
@@ -853,8 +879,47 @@ class Ultimate(BaccSys):
         to_bet = 0
 
         if self.registry_count > 0:
-            to_bet = self.base_bet * self.registry_count
-            self.bet_units = self.registry_count
+
+            '''
+                If we fail this coup, will our loss be greter than the max_loss_per_shoe
+                we might have already have some loss in the previous hands, if we loss this coup, will we be down more than allowed. 
+                    We have to calculated that here.
+            '''
+
+            potential_loss = self.money - self.registry_count * self.base_bet
+
+            if (abs(potential_loss) < self.max_loss_per_shoe):
+                to_bet = self.base_bet * self.registry_count
+                self.bet_units = self.registry_count
+            else:
+                ''' 
+                    Since we have exceed the max loss limit for the current shoe, 
+                    We will have to quit betting
+                '''
+                if (abs(self.money) >= self.max_loss_per_shoe):
+                    to_bet = ""
+                    self.bet_on = ""
+                    self.bet_units = 0
+                    self.amt_bet = 0
+                    self.busted = True
+                    return False
+                else:
+                    '''
+                        Whatever money we can use, we will only bet close to the limit
+                    '''
+                    margin_left = self.max_loss_per_shoe - self.money
+                    left_unit = int(margin_left/self.base_bet)
+
+                    if (left_unit>0):
+                        self.bet_units = left_unit
+                        return True
+                    else:
+                        self.bet_on = ""
+                        self.bet_units = 0
+                        self.amt_bet = 0
+                        self.busted = True
+                        return False
+
         else:
             self.bet_units = 1
             to_bet = self.base_bet * self.bet_units
@@ -870,6 +935,6 @@ class Ultimate(BaccSys):
 
         self.amt_bet = to_bet
 
-
+        return True
 
 # END
