@@ -652,6 +652,14 @@ class Ultimate(BaccSys):
         self.base_bet = 300
         self.last_bet_unit = 0
 
+        # money management portion of the system
+        self.bank_roll_unit = 20
+        self.total_bank_roll_unit = 80
+        self.bet_limit_min_unit = 5
+        self.bet_limit_max_unit = 7
+        self.target_profit_unit = 8
+        self.loss_limit_unit = self.bank_roll_unit
+
         self.played_hands = 0
         self.bet_units = 1
 
@@ -703,99 +711,80 @@ class Ultimate(BaccSys):
         if self.registry_count > 0:
             self.registry_count -= self.last_bet_unit
 
-    def win_start_coup(self):
-        to_bet = 0
+    def has_exceed_loss_limit(self):
+        if ( self.registry_count + 1 > self.loss_limit_unit ):
+            return True
+        return False
 
-        if self.registry_count > 0:
-            to_bet = self.base_bet * self.registry_count
-            self.bet_units = self.registry_count
+    def bet_one_unit_after_loss(self, new_state ):
+
+        if ( new_state == 1 or new_state == 3):
+            self.bet_on = self.opposite_side(self.last_bet_on)
+        elif (new_state == 2 or new_state == 4):
+            self.bet_on = self.last_bet_on
+
+        self.current_state = new_state
+
+        if self.has_exceed_loss_limit():
+            self.current_state = 0
+            self.bet_on = ""
+            self.bet_units = 0
+            self.amt_bet = 0
         else:
+            self.current_state = new_state
             self.bet_units = 1
-            to_bet = self.base_bet * self.bet_units
+            self.amt_bet = self.base_bet * self.bet_units
 
-
-        netMoney = self.initial_money + self.money
-
-        if (to_bet > netMoney):
-            new_bet_unit = int( netMoney / self.base_bet )
-            self.registry_count = new_bet_unit
-            self.bet_units = new_bet_unit
-            to_bet = new_bet_unit * self.base_bet
-
-        self.amt_bet = to_bet
+    def rebet_the_same(self, same_state):
+        self.current_state = same_state
+        self.bet_on = self.last_bet_on
+        self.amt_bet = self.last_amt_bet
 
     def process_state1(self):
         if self.last_WLT == "W":
-            self.current_state = 1
-            self.bet_on = self.opposite_side(self.last_bet_on)
-            self.win_start_coup()
-
+            self.win_start_coup(1)
 
         elif self.last_WLT == "T":
-            self.current_state = 1
-            self.bet_on = self.last_bet_on
-            self.amt_bet = self.last_amt_bet
+            self.rebet_the_same(1)
 
         elif self.last_WLT == "L":
-            self.current_state = 2
-            self.bet_on = self.last_bet_on
-            self.bet_units = 1
-            self.amt_bet = self.base_bet * self.bet_units
+            self.bet_one_unit_after_loss(2)
 
         self.backup_states()
 
 
     def process_state2(self):
         if self.last_WLT == "W":
-            self.current_state = 1
-            self.bet_on = self.last_bet_on
-            self.win_start_coup()
+            self.win_start_coup(1)
 
         elif self.last_WLT == "T":
-            self.current_state = 2
-            self.bet_on = self.last_bet_on
-            self.amt_bet = self.last_amt_bet
-        else:
-            self.current_state = 3
-            self.bet_on = self.opposite_side(self.last_bet_on)
-            self.bet_units = 1
-            self.amt_bet = self.base_bet * self.bet_units
+            self.rebet_the_same(2)
+
+        elif self.last_WLT == "L":
+            self.bet_one_unit_after_loss(3)
 
         self.backup_states()
 
     def process_state3(self):
         if self.last_WLT == "W":
-            self.current_state = 1
-            self.bet_on = self.opposite_side(self.last_bet_on)
-            self.win_start_coup()
+            self.win_start_coup(1)
 
         elif self.last_WLT == "T":
-            self.current_state = 3
-            self.bet_on = self.last_bet_on
-            self.amt_bet = self.last_amt_bet
-        else:
-            self.current_state = 4
-            self.bet_on = self.last_bet_on
-            self.bet_units = 1
-            self.amt_bet = self.base_bet * self.bet_units
+            self.rebet_the_same(3)
+
+        elif self.last_WLT == "L":
+            self.bet_one_unit_after_loss(4)
 
         self.backup_states()
 
 
     def process_state4(self):
         if self.last_WLT == "W":
-            self.current_state = 3
-            self.bet_on = self.last_bet_on
-            self.win_start_coup()
+            self.win_start_coup(3)
         elif self.last_WLT == "T":
-            self.current_state = 3
-            self.bet_on = self.last_bet_on
-            self.amt_bet = self.last_amt_bet
+            self.rebet_the_same(4)
         else:
-            self.current_state = 1
-            self.bet_on = self.opposite_side(self.last_bet_on)
-            self.bet_units = 1
-            self.amt_bet = self.base_bet * self.bet_units
+            self.bet_one_unit_after_loss(1)
 
         self.backup_states()
 
@@ -831,7 +820,6 @@ class Ultimate(BaccSys):
         return ""
 
     def hand_post(self, win, win_diff, p_hand, b_hand):
-
         if ( win[0] != "T"):
             self.last_actual_outcome = win[0]
 
@@ -848,6 +836,39 @@ class Ultimate(BaccSys):
                 seq2 += "0123456789abcdefghij"[j]
             seq2 += " "
         return "Won = %d, Lost = %d, Tie = %d, Money = %+.2f, Sequence = %s" % ( self.won, self.lost,self.tied,self.money,seq2)
+
+    '''
+        Majority of the betting logic is in the 
+    '''
+    def win_start_coup(self, new_state ):
+
+        if ( self.current_state == 1 or self.current_state == 3):
+            self.bet_on = self.opposite_side(self.last_bet_on)
+        elif (self.current_state == 2 or self.current_state == 4):
+            self.bet_on = self.last_bet_on
+
+        self.current_state = new_state
+
+
+        to_bet = 0
+
+        if self.registry_count > 0:
+            to_bet = self.base_bet * self.registry_count
+            self.bet_units = self.registry_count
+        else:
+            self.bet_units = 1
+            to_bet = self.base_bet * self.bet_units
+
+
+        netMoney = self.initial_money + self.money
+
+        if (to_bet > netMoney):
+            new_bet_unit = int( netMoney / self.base_bet )
+            self.registry_count = new_bet_unit
+            self.bet_units = new_bet_unit
+            to_bet = new_bet_unit * self.base_bet
+
+        self.amt_bet = to_bet
 
 
 

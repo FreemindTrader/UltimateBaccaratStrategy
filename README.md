@@ -1,15 +1,4 @@
 # PyBaccarat
-Using PyBaccarat, I tried to implement the Ultimate Baccarat Strategy to see if it is really that profitable.
-
-The states in the pdf file has been changed to the following
-
-A-1 is state 1
-A-2 is state 2
-B-1 is state 3
-B-4 is state 4
-
-I am going to work on the Money Management Rules next
-
 Play the card game Baccarat
 
 To check out a copy of the source:
