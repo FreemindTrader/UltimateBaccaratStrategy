@@ -22,6 +22,8 @@ This module is collection of classes used with playing the game
 
 
 from pybaccarat.playingcards import Card,Shoe
+from colorama import Fore
+from colorama import Style
 
 __version__ = 0.22  ##!<@version 0.22
 
@@ -188,16 +190,23 @@ class Scoreboard(object):
     board2 = "small road"
     board3 = "cockroach pig"
     '''
-    RED_SAME = 's'
-    BLUE_CHOP = 'C'
+    RED_SAME = 'O'
+    BLUE_CHOP = 'X'
 
     def __init__(self, type, table_size=6):
         self.board_type = type
         self.h_array = [ "R%d" % type ]
         self.horiz_count = table_size * [0]
         self.lines = (table_size+1) * [None]
-        self.lines[0] = "....v....1....v....2....v....3....v....4" + \
-            "....v....5....v....6" + " R%d" % type
+
+        # tony - Counting the Run / Chop
+        self.run_count = 0
+        self.chop_count = 0
+        self.same_type = 0
+        self.new_column = False
+
+        self.lines[0] = "....v....1....v....2....v....3....v....4" + "....v....5....v....6" + " R%d" % type
+
         for i in range(table_size):
             self.lines[i + 1] = " "*60 + " %2d" % self.horiz_count[i]
 
@@ -218,8 +227,7 @@ class Scoreboard(object):
         # only mark the board if it was a legal marker value
         if (self.board_type == 0 and marker != "B" and marker != "P"):
             return
-        if (self.board_type > 0 and marker != "C" and marker != 's'):
-            return
+
         if (self.board_type < 0):
             return
 
@@ -227,12 +235,47 @@ class Scoreboard(object):
         # "len<2" means this is the first mark on this board.
         # "[-1][0]!=marker" means this is a different marker from the
         # last one recorded, thus requires a new column.
-        if len(self.h_array) < 2 or self.h_array[-1][0] != marker:
-            # add a new column with a count of 0 (incremented later)
-            self.h_array.append( [marker, 0] )
+        if len(self.h_array) < 2:
+            self.h_array.append([marker, 0])
+            self.same_type = 1
+        else:
+            if self.h_array[-1][0] != marker:
+                # add a new column with a count of 0 (incremented later)
+                self.h_array.append([marker, 0])
+                self.new_column = True
+
+                if self.same_type == 1:
+                    self.chop_count += 1
+                    my_col = len(self.h_array) - 1
+                    mystr = self.lines[0]
+
+                    modulus = self.chop_count % 10
+
+                    mystr = mystr[:my_col-2] + str(modulus) + mystr[my_col-2 + 1:]
+                    self.lines[0] = mystr
+
+                else:
+                    self.same_type = 1
+            else:
+                self.same_type += 1
+
+                if ( self.same_type == 2):
+                    self.run_count += 1
+                    my_col = len(self.h_array) - 1
+                    mystr = self.lines[0]
+                    modulus = self.run_count % 10
+                    mystr = mystr[:my_col-1] + str(modulus)  + mystr[my_col-1 + 1:]
+                    self.lines[0] = mystr
+
+
+
+
         # increment the count in this column
         col = len(self.h_array) - 1
         self.h_array[col][1] += 1
+
+
+
         # time to mark the print lines
         row = self.h_array[col][1]
         #
@@ -321,7 +364,7 @@ class Scoreboard(object):
     def print_lines(self):
         out = ""
         for line in self.lines:
-            out += line + "\n"
+            out += line + f"{Style.RESET_ALL}\n"
         return out
 
     def remove_last(self):
@@ -625,13 +668,16 @@ class Game(object):
                 if (32 - 4 * (hand_number // 11)) < rc2:
                     flag2 = "<"
 
-                print(("[%02d] *** %s ***, %s WON, P%d%-10s B%d%-10s BPT=%02d-%02d-%02d" ) %
+                print(("[%02d] *** %s ***, %s WON, P%d%-10s B%d%-10s BPT=%02d-%02d-%02d CHOP=%02d RUN=%2d" ) %
                       (hand_number,  system_hand_output, win,
                        self.__player.value(), str(self.__player),
                        self.__banker.value(), str(self.__banker),
-                       bpt['B'], bpt['P'], bpt['T'] ))
+                       bpt['B'], bpt['P'], bpt['T'], boards[0].chop_count, boards[0].run_count ))
 
                 print(boards[0].print_lines())
+                #print(boards[1].print_lines())
+                #print(boards[2].print_lines())
+                #print(boards[3].print_lines())
                 print(self.system_play.end_shoe())
                 print(79 * "_")
             # notify the user

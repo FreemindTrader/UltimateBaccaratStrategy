@@ -4,7 +4,7 @@ from colorama import Style
 from pybaccarat.baccaratsystems import BaccSys
 
 
-class Ultimate(BaccSys):
+class ModifiedUltimate(BaccSys):
 
     def __init__(self):
         '''!
@@ -22,7 +22,7 @@ class Ultimate(BaccSys):
         self.last_bet_unit = 0
 
         # money management portion of the system
-        self.bank_roll_unit = 50
+        self.bank_roll_unit = 20
         self.total_bank_roll_unit = 80
         self.bet_limit_min_unit = 5
         self.bet_limit_max_unit = 7
@@ -37,7 +37,7 @@ class Ultimate(BaccSys):
 
         self.cum_won = 0
 
-        super(Ultimate, self).__init__()
+        super(ModifiedUltimate, self).__init__()
 
     def deposit_money(self, to_deposit ):
         self.initial_money += to_deposit
