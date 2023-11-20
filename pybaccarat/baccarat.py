@@ -24,6 +24,7 @@ This module is collection of classes used with playing the game
 from pybaccarat.playingcards import Card,Shoe
 from colorama import Fore
 from colorama import Style
+import colorama
 
 __version__ = 0.22  ##!<@version 0.22
 
@@ -194,6 +195,9 @@ class Scoreboard(object):
     BLUE_CHOP = 'X'
 
     def __init__(self, type, table_size=6):
+
+        colorama.init(convert=True)
+
         self.board_type = type
         self.h_array = [ "R%d" % type ]
         self.horiz_count = table_size * [0]
@@ -201,11 +205,14 @@ class Scoreboard(object):
 
         # tony - Counting the Run / Chop
         self.run_count = 0
+        self.run_list = []
         self.chop_count = 0
         self.same_type = 0
         self.new_column = False
 
-        self.lines[0] = "....v....1....v....2....v....3....v....4" + "....v....5....v....6" + " R%d" % type
+        self.my_line = "....v....1....v....2....v....3....v....4" + "....v....5....v....6" + " R%d" % type
+
+        self.lines[0] = self.my_line
 
         for i in range(table_size):
             self.lines[i + 1] = " "*60 + " %2d" % self.horiz_count[i]
@@ -247,12 +254,18 @@ class Scoreboard(object):
                 if self.same_type == 1:
                     self.chop_count += 1
                     my_col = len(self.h_array) - 1
-                    mystr = self.lines[0]
-
                     modulus = self.chop_count % 10
 
-                    mystr = mystr[:my_col-2] + str(modulus) + mystr[my_col-2 + 1:]
-                    self.lines[0] = mystr
+
+                    mymod = str(modulus)
+                    mystr = f"{mymod}"
+
+                    self.run_list.append(mystr)
+
+                    self.lines[0] = ''.join(self.run_list) + self.my_line[my_col-2 + 1:]
+
+                    #mystr = mystr[:my_col-2] + str(modulus) + mystr[my_col-2 + 1:]
+                    #self.lines[0] = mystr
 
                 else:
                     self.same_type = 1
@@ -262,10 +275,13 @@ class Scoreboard(object):
                 if ( self.same_type == 2):
                     self.run_count += 1
                     my_col = len(self.h_array) - 1
-                    mystr = self.lines[0]
                     modulus = self.run_count % 10
-                    mystr = mystr[:my_col-1] + str(modulus)  + mystr[my_col-1 + 1:]
-                    self.lines[0] = mystr
+
+                    mymod = str(modulus)
+                    mystr = f"{Fore.MAGENTA}{mymod}{Fore.RESET}"
+                    self.run_list.append(mystr)
+
+                    self.lines[0] = ''.join(self.run_list)+ self.my_line[my_col-2 + 1:]
 
 
 
@@ -280,7 +296,8 @@ class Scoreboard(object):
         row = self.h_array[col][1]
         #
         six = len(self.horiz_count)
-        sixty = len(self.lines[0]) - 3
+        sixty = len(self.my_line) - 3
+
         # update the horiz count
         if row <= six:
             self.horiz_count[row - 1] += 1

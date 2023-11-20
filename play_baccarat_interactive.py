@@ -5,7 +5,7 @@ from pybaccarat.playingcards import Shoe
 from pybaccarat.baccarat import Game
 from pybaccarat.baccaratsystems import Interactive, JustBoards
 from pybaccarat.UltimateBaccarat import Ultimate
-from colorama import init as colorama_init
+import colorama
 from colorama import Fore
 from colorama import Style
 
@@ -38,7 +38,9 @@ def str2bool(v):
 
 if __name__ == "__main__":
     # command line entry point
-    colorama_init()
+    colorama.init(convert=True)
+
+
 
     parser = argparse.ArgumentParser("Play a game of Baccarat interactively")
     parser.add_argument("--create", dest="create_filespec",
